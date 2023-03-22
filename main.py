@@ -6,12 +6,13 @@ import time
 PATH = r"C:\Program Files (x86)\chromedriver.exe"
 
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+
+
 driver.get("http://www.chessarbiter.com/")
 html = driver.page_source
 time.sleep(2)
-print(html)
-with open("html.html", "w",encoding="utf-8") as html_file:
-    html_file.write(html)
+chess_soup = Bs(html, "html.parser").prettify()
+tournaments_only_html = chess_soup.find_all("tr", class_=["tbl1", "tbl2"])
     
 
 def get_tournament_info(html):
