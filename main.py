@@ -26,6 +26,8 @@ unusual_stations = {"chorzów": "Chorzów miasto", "biskupiec": "Biskupiec Pomor
                  "szczecin": "Szczecin Główny", "przemyśl":"przemyśl główny",
                  "świdnica": "Świdnica Miasto", "szklarska poręba": "Szklarska Poręba Górna"}
 tournaments = []
+starting_station = input("What is the name of your starting station? \n")
+search_dates = input('Input dates you want to search ("24-03,02.11..."): ').split(",")
 
 driver.get("http://www.chessarbiter.com/")
 time.sleep(2)
@@ -35,21 +37,29 @@ chess_soup = Bs(chess_soup, "html.parser")
 tournaments_only_html = chess_soup.find_all("tr", class_=["tbl1", "tbl2"])
     
 
-def get_tournament_info(html):
-    soup = Bs(html, "html.parser")
-    tr_list = soup.find("tr")
-    link_and_name = str(tr_list.find("a")).split('"')
-    place_and_type = tr_list.find_all("div", class_="szary")[1:]
+def get_tournament_info(tr_tag):
+    link_and_name = str(tr_tag.find("a")).split('"')
+    place_and_type = tr_tag.find_all("div", class_="szary")[1:]
 
     link = link_and_name[1]
     tournament_name = link_and_name[4].split("\n")[1].strip()
     time_control = str(place_and_type[1]).split("\n")[1].strip()
     place = str(place_and_type[0]).split("\n")[1].strip().split("  ")[0]
-    province = str(tr_list.find("td", {"width": "12%"})).split("\n")[1][-2:]
-    date = str(tr_list.find("td", {"width": "10%"})).split("\n")[1].strip()
+    province = str(tr_tag.find("td", {"width": "12%"})).split("\n")[1][-2:]
+    date = str(tr_tag.find("td", {"width": "10%"})).split("\n")[1].strip()
     try:
         is_fide = str(place_and_type[1]).split("\n")[3].strip()
     except IndexError:
         is_fide = "bez Fide"
+    
+    if date in search_dates:
+        tournaments.append(Tournament(place, province, date, time_control, is_fide, tournament_name, link))
+    else:
+        pass
+    
+for element in tournaments:
+    if element.place.lower() in unusual_stations:
+        destination = unusual_stations[element.place.lower()]
+    else:
+        destination = element.place
         
-    tournaments.append(Tournament(place, province, date, time_control, is_fide, tournament_name, link))
