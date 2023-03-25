@@ -62,4 +62,14 @@ for element in tournaments:
         destination = unusual_stations[element.place.lower()]
     else:
         destination = element.place
+    
+    driver.get(f"https://koleo.pl/rozklad-pkp/{starting_station}/{destination}/{element.date}-2023_04:00/all/all")
+    time.sleep(3)
+    html = driver.page_source
+    soup = Bs(html, "html.parser")
+    price_list = soup.find_all("span", class_="price-parts")
+    naked_prices = [e.contents[0].strip().replace(",", ".") for e in price_list]
+    nakeder_prices = [float(e) if e[-2:] != "zł" else float(e[0:-3]) for e in naked_prices]
+    lowest_price = str(sorted(nakeder_prices)[0]) if len(nakeder_prices) > 0 else "Brak ceny"
+    element.ticket_cost = lowest_price
         
