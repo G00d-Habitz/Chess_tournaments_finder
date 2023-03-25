@@ -4,7 +4,6 @@ from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup as Bs
 import time
 
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 
 class Tournament:
     def __init__(self, place, province, date, time_control, is_fide, tournament_name, link, ticket_cost=0):
@@ -17,26 +16,7 @@ class Tournament:
         self.link = link
         self.ticket_cost = ticket_cost
 
-unusual_stations = {"chorzów": "Chorzów miasto", "biskupiec": "Biskupiec Pomorski", "bieruń": "Nowy Bieruń",
-                 "czerwionka-leszczyny": "Czerwionka", "gdynia": "Gdynia Główna", "bydgoszcz": "bydgoszcz Główna",
-                 "radom": "Radom Główny", "rzeszów": "Rzeszów Główny", "zielona góra": "Zielona Góra Główna",
-                 "lublin": "Lublin Główny", "wrocław": "Wrocław Główny", "bielsko-biała": "Bielsko-Biała Główna",
-                 "poznań": "Poznań Główny", "wieliczka": "Wieliczka Rynek-Kopalnia", "jaworzno": "Jaworzno Szczakowa",
-                 "strzelce krajeńskie": "Strzelce Krajeńskie-wschód", "łowicz": "Łowicz Główny",
-                 "szczecin": "Szczecin Główny", "przemyśl":"przemyśl główny",
-                 "świdnica": "Świdnica Miasto", "szklarska poręba": "Szklarska Poręba Górna"}
-tournaments = []
-starting_station = input("What is the name of your starting station? \n")
-search_dates = input('Input dates you want to search ("24-03,02.11..."): ').split(",")
-
-driver.get("http://www.chessarbiter.com/")
-time.sleep(2)
-html = driver.page_source
-chess_soup = Bs(html, "html.parser").prettify()
-chess_soup = Bs(chess_soup, "html.parser")
-tournaments_only_html = chess_soup.find_all("tr", class_=["tbl1", "tbl2"])
-    
-
+        
 def get_tournament_info(tr_tag):
     link_and_name = str(tr_tag.find("a")).split('"')
     place_and_type = tr_tag.find_all("div", class_="szary")[1:]
@@ -53,9 +33,52 @@ def get_tournament_info(tr_tag):
         is_fide = "bez Fide"
     
     if date in search_dates:
-        tournaments.append(Tournament(place, province, date, time_control, is_fide, tournament_name, link))
-    else:
-        pass
+        if time_control in search_time_control:
+            tournaments.append(Tournament(place, province, date, time_control, is_fide, tournament_name, link))
+        
+        
+def get_ticket_prices(start, destiny, date):
+    driver.get(f"https://koleo.pl/rozklad-pkp/{start}/{destiny}/{date}-2023_04:00/all/all")
+    time.sleep(3)
+    trains_html = driver.page_source
+    soup = Bs(trains_html, "html.parser")
+    price_list = soup.find_all("span", class_="price-parts")
+    naked_prices = [e.contents[0].strip().replace(",", ".") for e in price_list]
+    nakeder_prices = [float(e) if e[-2:] != "zł" else float(e[0:-3]) for e in naked_prices]
+    lowest_price = float(sorted(nakeder_prices)[0]) if len(nakeder_prices) > 0 else 9999
+    element.ticket_cost = round(lowest_price * discount, 2)
+    
+
+unusual_stations = {"chorzów": "Chorzów miasto", "biskupiec": "Biskupiec Pomorski", "bieruń": "Nowy Bieruń",
+                    "czerwionka-leszczyny": "Czerwionka", "gdynia": "Gdynia Główna", "bydgoszcz": "bydgoszcz Główna",
+                    "radom": "Radom Główny", "rzeszów": "Rzeszów Główny", "zielona góra": "Zielona Góra Główna",
+                    "lublin": "Lublin Główny", "wrocław": "Wrocław Główny", "bielsko-biała": "Bielsko-Biała Główna",
+                    "poznań": "Poznań Główny", "wieliczka": "Wieliczka Rynek-Kopalnia",
+                    "jaworzno": "Jaworzno Szczakowa", "opole": "Opole Główne",
+                    "strzelce krajeńskie": "Strzelce Krajeńskie-wschód", "łowicz": "Łowicz Główny",
+                    "szczecin": "Szczecin Główny", "przemyśl": "przemyśl główny",
+                    "świdnica": "Świdnica Miasto", "szklarska poręba": "Szklarska Poręba Górna"}
+tournaments = []
+starting_station = input("Jaka jest Twoja stacja początkowa? \n")
+search_dates = input('Wypisz daty w jakich możesz grać w turniejach ("24-03,02.11..."):\n').split(",")
+search_time_control = input('Wypisz jakie szachy Cię interesują ("klasyczne,szybkie",blitz"):\n').split(",")
+discount = 1 - float(input('Ile % wynosi twoja zniżka? (po prostu np. "0", "51"):\n')) / 100
+
+
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+driver.get("http://www.chessarbiter.com/")
+time.sleep(2)
+html = driver.page_source
+chess_soup = Bs(html, "html.parser").prettify()
+chess_soup = Bs(chess_soup, "html.parser")
+tournaments_only_html = chess_soup.find_all("tr", class_=["tbl1", "tbl2"])
+    
+    
+if starting_station.lower() in unusual_stations:
+    starting_station = unusual_stations[starting_station.lower()]
+    
+for element in tournaments_only_html:
+    get_tournament_info(element)
     
 for element in tournaments:
     if element.place.lower() in unusual_stations:
@@ -63,13 +86,13 @@ for element in tournaments:
     else:
         destination = element.place
     
-    driver.get(f"https://koleo.pl/rozklad-pkp/{starting_station}/{destination}/{element.date}-2023_04:00/all/all")
-    time.sleep(3)
-    html = driver.page_source
-    soup = Bs(html, "html.parser")
-    price_list = soup.find_all("span", class_="price-parts")
-    naked_prices = [e.contents[0].strip().replace(",", ".") for e in price_list]
-    nakeder_prices = [float(e) if e[-2:] != "zł" else float(e[0:-3]) for e in naked_prices]
-    lowest_price = str(sorted(nakeder_prices)[0]) if len(nakeder_prices) > 0 else "Brak ceny"
-    element.ticket_cost = lowest_price
-        
+    if starting_station.lower() == destination.lower():
+        element.ticket_cost = 0
+    else:
+        get_ticket_prices(starting_station, destination, element.date)
+    
+tournaments.sort(key=lambda x: x.ticket_cost)
+i = 0
+for t in tournaments:
+    i += 1
+    print(i, t.ticket_cost, t.date, t.place, t.province, t.time_control, t.is_fide, t.tournament_name, t.link)
