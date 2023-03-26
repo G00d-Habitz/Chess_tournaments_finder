@@ -32,12 +32,20 @@ def get_tournament_info(tr_tag):
     except IndexError:
         is_fide = "bez Fide"
     
-    if date in search_dates:
-        if time_control in search_time_control:
+    if date in search_dates and time_control in search_time_control:
             tournaments.append(Tournament(place, province, date, time_control, is_fide, tournament_name, link))
         
         
 def get_ticket_prices(start, destiny, date):
+    for tournament in tournaments:
+        if destiny.lower() == tournament.place.lower() and date == tournament.date and tournament.ticket_cost != 0:
+            element.ticket_cost = tournament.ticket_cost
+            return None
+        elif destiny.lower() in unusual_stations.values():
+            if destiny.lower() == unusual_stations.get(tournament.place.lower(), False) and date == tournament.date and tournament.ticket_cost != 0:
+                element.ticket_cost = tournament.ticket_cost
+                return None
+
     driver.get(f"https://koleo.pl/rozklad-pkp/{start}/{destiny}/{date}-2023_04:00/all/all")
     time.sleep(3)
     trains_html = driver.page_source
@@ -49,15 +57,15 @@ def get_ticket_prices(start, destiny, date):
     element.ticket_cost = round(lowest_price * discount, 2)
     
 
-unusual_stations = {"chorzów": "Chorzów miasto", "biskupiec": "Biskupiec Pomorski", "bieruń": "Nowy Bieruń",
-                    "czerwionka-leszczyny": "Czerwionka", "gdynia": "Gdynia Główna", "bydgoszcz": "bydgoszcz Główna",
-                    "radom": "Radom Główny", "rzeszów": "Rzeszów Główny", "zielona góra": "Zielona Góra Główna",
-                    "lublin": "Lublin Główny", "wrocław": "Wrocław Główny", "bielsko-biała": "Bielsko-Biała Główna",
-                    "poznań": "Poznań Główny", "wieliczka": "Wieliczka Rynek-Kopalnia",
-                    "jaworzno": "Jaworzno Szczakowa", "opole": "Opole Główne",
-                    "strzelce krajeńskie": "Strzelce Krajeńskie-wschód", "łowicz": "Łowicz Główny",
-                    "szczecin": "Szczecin Główny", "przemyśl": "przemyśl główny",
-                    "świdnica": "Świdnica Miasto", "szklarska poręba": "Szklarska Poręba Górna"}
+unusual_stations = {"chorzów": "Chorzów miasto", "biskupiec": "biskupiec pomorski", "bieruń": "nowy bieruń",
+                    "czerwionka-leszczyny": "czerwionka", "gdynia": "gdynia główna", "bydgoszcz": "bydgoszcz główna",
+                    "radom": "radom główny", "rzeszów": "rzeszów główny", "zielona góra": "zielona góra główna",
+                    "lublin": "lublin główny", "wrocław": "wrocław główny", "bielsko-biała": "bielsko-biała główna",
+                    "poznań": "poznań główny", "wieliczka": "wieliczka rynek-kopalnia",
+                    "jaworzno": "jaworzno szczakowa", "opole": "opole główne",
+                    "strzelce krajeńskie": "strzelce krajeńskie-wschód", "łowicz": "łowicz główny",
+                    "szczecin": "szczecin główny", "przemyśl": "przemyśl główny",
+                    "świdnica": "świdnica miasto", "szklarska poręba": "szklarska poręba górna"}
 tournaments = []
 starting_station = input("Jaka jest Twoja stacja początkowa? \n")
 search_dates = input('Wypisz daty w jakich możesz grać w turniejach ("24-03,02.11..."):\n').split(",")
@@ -92,7 +100,6 @@ for element in tournaments:
         get_ticket_prices(starting_station, destination, element.date)
     
 tournaments.sort(key=lambda x: x.ticket_cost)
-i = 0
-for t in tournaments:
-    i += 1
+
+for i, t in enumerate(tournaments):
     print(i, t.ticket_cost, t.date, t.place, t.province, t.time_control, t.is_fide, t.tournament_name, t.link)
