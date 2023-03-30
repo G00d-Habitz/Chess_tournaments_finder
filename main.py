@@ -17,16 +17,16 @@ class Tournament:
         self.ticket_cost = ticket_cost
 
         
-def get_tournament_info(tr_tag):
-    link_and_name = str(tr_tag.find("a")).split('"')
-    place_and_type = tr_tag.find_all("div", class_="szary")[1:]
+def get_tournament_info(tournament_tag):
+    link_and_name = str(tournament_tag.find("a")).split('"')
+    place_and_type = tournament_tag.find_all("div", class_="szary")[1:]
 
     link = link_and_name[1]
     tournament_name = link_and_name[4].split("\n")[1].strip()
     time_control = str(place_and_type[1]).split("\n")[1].strip()
     place = str(place_and_type[0]).split("\n")[1].strip().split("  ")[0]
-    province = str(tr_tag.find("td", {"width": "12%"})).split("\n")[1][-2:]
-    date = str(tr_tag.find("td", {"width": "10%"})).split("\n")[1].strip()
+    province = str(tournament_tag.find("td", {"width": "12%"})).split("\n")[1][-2:]
+    date = str(tournament_tag.find("td", {"width": "10%"})).split("\n")[1].strip()
     try:
         is_fide = str(place_and_type[1]).split("\n")[3].strip()
     except IndexError:
@@ -102,4 +102,4 @@ for element in tournaments:
 tournaments.sort(key=lambda x: x.ticket_cost)
 
 for i, t in enumerate(tournaments):
-    print(i, t.ticket_cost, t.date, t.place, t.province, t.time_control, t.is_fide, t.tournament_name, t.link)
+    print(i+1, t.ticket_cost, t.date, t.place, t.province, t.time_control, t.is_fide, t.tournament_name, t.link)
