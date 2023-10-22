@@ -1,2 +1,2 @@
 # Chess_tournaments_finder
-Program that looks for chess tournaments in Poland in given dates and finds you the cheapest one in travel by train.
+Application to search for chess tournaments in Poland on specified dates and identify the most cost-effective train travel options.
