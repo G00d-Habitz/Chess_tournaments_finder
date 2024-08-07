@@ -1,8 +1,11 @@
+from datetime import datetime
+
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup as Bs
 import time
+
 
 
 class Tournament:
@@ -16,7 +19,15 @@ class Tournament:
         self.link = link
         self.ticket_cost = ticket_cost
 
-        
+
+def sanitize_station(station):
+    replacements = {" ":"-","ą":"a","ć":"c","ę":"e","ł":"l","ń":"n","ó":"o","ś":"s","ź":"z","ż":"z"}
+    station = station.lower()
+    for key, value in replacements.items():
+        station = station.replace(key, value)
+    return station
+
+
 def get_tournament_info(tournament_tag):
     link_and_name = str(tournament_tag.find("a")).split('"')
     place_and_type = tournament_tag.find_all("div", class_="szary")[1:]
@@ -31,22 +42,24 @@ def get_tournament_info(tournament_tag):
         is_fide = str(place_and_type[1]).split("\n")[3].strip()
     except IndexError:
         is_fide = "bez Fide"
-    
+
     if date in search_dates and time_control in search_time_control:
-            tournaments.append(Tournament(place, province, date, time_control, is_fide, tournament_name, link))
-        
-        
+        tournaments.append(Tournament(place, province, date, time_control, is_fide, tournament_name, link))
+
 def get_ticket_prices(start, destiny, date):
     for tournament in tournaments:
         if destiny.lower() == tournament.place.lower() and date == tournament.date and tournament.ticket_cost != 0:
             element.ticket_cost = tournament.ticket_cost
             return None
         elif destiny.lower() in unusual_stations.values():
-            if destiny.lower() == unusual_stations.get(tournament.place.lower(), False) and date == tournament.date and tournament.ticket_cost != 0:
+            if destiny.lower() == unusual_stations.get(tournament.place.lower(),
+                                                       False) and date == tournament.date and tournament.ticket_cost != 0:
                 element.ticket_cost = tournament.ticket_cost
                 return None
 
-    driver.get(f"https://koleo.pl/rozklad-pkp/{start}/{destiny}/{date}-2023_04:00/all/all")
+    current_year = datetime.today().strftime("%Y")
+
+    driver.get(f"https://koleo.pl/rozklad-pkp/{start}/{destiny}/{date}-{current_year}_04:00/all/all")
     time.sleep(3)
     trains_html = driver.page_source
     soup = Bs(trains_html, "html.parser")
@@ -55,7 +68,7 @@ def get_ticket_prices(start, destiny, date):
     nakeder_prices = [float(e) if e[-2:] != "zł" else float(e[0:-3]) for e in naked_prices]
     lowest_price = float(sorted(nakeder_prices)[0]) if len(nakeder_prices) > 0 else 9999
     element.ticket_cost = round(lowest_price * discount, 2)
-    
+
 
 unusual_stations = {"chorzów": "Chorzów miasto", "biskupiec": "biskupiec pomorski", "bieruń": "nowy bieruń",
                     "czerwionka-leszczyny": "czerwionka", "gdynia": "gdynia główna", "bydgoszcz": "bydgoszcz główna",
@@ -72,7 +85,6 @@ search_dates = input('Wypisz daty w jakich możesz grać w turniejach ("24-03,02
 search_time_control = input('Wypisz jakie szachy Cię interesują ("klasyczne,szybkie",blitz"):\n').split(",")
 discount = 1 - float(input('Ile % wynosi twoja zniżka? (po prostu np. "0", "51"):\n')) / 100
 
-
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 driver.get("http://www.chessarbiter.com/")
 time.sleep(2)
@@ -80,26 +92,25 @@ html = driver.page_source
 chess_soup = Bs(html, "html.parser").prettify()
 chess_soup = Bs(chess_soup, "html.parser")
 tournaments_only_html = chess_soup.find_all("tr", class_=["tbl1", "tbl2"])
-    
-    
+
 if starting_station.lower() in unusual_stations:
     starting_station = unusual_stations[starting_station.lower()]
-    
+
 for element in tournaments_only_html:
     get_tournament_info(element)
-    
+
 for element in tournaments:
     if element.place.lower() in unusual_stations:
         destination = unusual_stations[element.place.lower()]
     else:
         destination = element.place
-    
+
     if starting_station.lower() == destination.lower():
         element.ticket_cost = 0
     else:
-        get_ticket_prices(starting_station, destination, element.date)
-    
+        get_ticket_prices(sanitize_station(starting_station), sanitize_station(destination), element.date)
+
 tournaments.sort(key=lambda x: x.ticket_cost)
 
 for i, t in enumerate(tournaments):
-    print(i+1, t.ticket_cost, t.date, t.place, t.province, t.time_control, t.is_fide, t.tournament_name, t.link)
+    print(i + 1, t.ticket_cost, t.date, t.place, t.province, t.time_control, t.is_fide, t.tournament_name, t.link)
