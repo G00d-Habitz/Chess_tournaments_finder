@@ -39,6 +39,7 @@ In 2024, I'm coming back to playing tournament chess and developing this program
 * Exception handling
 * An update to unusual_stations
 * Overall refactoring
+* Try to add Czech and Slovak tournaments from Šachové správy website and České dráhy trains
 * Additional information about the tournaments (e.g., if it's a single-day or multiple-day event)
 * Ability to search in one voivodeship or one and the neighbouring voivodeships
 * Finding a faster way of scraping prices
